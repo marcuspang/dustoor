@@ -103,20 +103,23 @@ export function CreateOrderNew() {
     address: selectedTokens[0]?.address as `0x${string}`,
     account: address,
     chainId,
-    args: selectedTokens.length > 0 && minPrice && deadline ? [
+    args: selectedTokens.length > 0 && minPrice && deadline && selectedTokens[0]?.amount ? [
       {
         dstEid: parseInt(destinationEid),
-        to: `0x${'0'.repeat(24)}${MARKETPLACE_ADDRESS.slice(2)}` as `0x${string}`,
-        amountLD: parseEther(selectedTokens[0]?.amount || '0'),
-        minAmountLD: parseEther(((parseFloat(selectedTokens[0]?.amount || '0') * 0.95)).toString()),
-        extraOptions: '0x00030100110100000000000000000000000000fdfe00030200010000000000000000000000000000c350' as `0x${string}`,
+        to: MARKETPLACE_ADDRESS,
+        amountLD: parseEther(selectedTokens[0].amount),
+        minAmountLD: parseEther(((parseFloat(selectedTokens[0].amount) * 0.95)).toString()),
+        extraOptions: '0x' as `0x${string}`,
         composeMsg: generateComposeMessage(),
         oftCmd: '0x' as `0x${string}`
       },
       false // payInLzToken
     ] : undefined,
     query: {
-      enabled: selectedTokens.length > 0 && !!minPrice && !!deadline && !!selectedTokens[0]?.address && !!address
+      enabled: selectedTokens.length > 0 &&
+              !!minPrice &&
+              !!deadline &&
+              parseFloat(selectedTokens[0]?.amount || '0') > 0
     }
   })
 
@@ -131,17 +134,15 @@ export function CreateOrderNew() {
 
       const composeMsg = generateComposeMessage()
 
-      // Convert marketplace address to bytes32 format for LayerZero
-      const toBytes32 = `0x${'0'.repeat(24)}${MARKETPLACE_ADDRESS.slice(2)}` as `0x${string}`
-
       // Create execution options for compose messages (lzReceive + lzCompose)
       // Based on OFT guide: need gas for both token transfer and compose execution
-      const extraOptions = '0x00030100110100000000000000000000000000fdfe00030200010000000000000000000000000000c350' as `0x${string}`
+      // Starting with empty options to test basic functionality
+      const extraOptions = '0x' as `0x${string}`
 
       // Create send parameters for OFT
       const sendParam = {
         dstEid: parseInt(destinationEid),
-        to: toBytes32, // Marketplace contract address as bytes32
+        to: MARKETPLACE_ADDRESS as `0x${string}`, // Marketplace contract address as bytes32
         amountLD: parseEther(primaryToken.amount),
         minAmountLD: parseEther((parseFloat(primaryToken.amount) * 0.95).toString()), // 5% slippage
         extraOptions: extraOptions, // Execution options for compose
@@ -349,7 +350,7 @@ export function CreateOrderNew() {
           </Alert>
         )}
 
-        {quoteSendQuery.isPending && selectedTokens.length > 0 && minPrice && deadline && (
+        {quoteSendQuery.isPending && selectedTokens.length > 0 && minPrice && deadline && selectedTokens[0]?.amount && (
           <Alert>
             <AlertDescription>
               Fetching transaction fees...
@@ -374,7 +375,7 @@ export function CreateOrderNew() {
 
         <Button
           onClick={handleCreateOrder}
-          disabled={isPending || isConfirming || selectedTokens.length === 0 || !minPrice || !deadline}
+          disabled={isPending || isConfirming || selectedTokens.length === 0 || !minPrice || !deadline || !quoteSendQuery.data || quoteSendQuery.isPending}
           className="w-full"
         >
           {isPending || isConfirming ? (
