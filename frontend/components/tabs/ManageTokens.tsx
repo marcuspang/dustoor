@@ -64,8 +64,7 @@ function TokenBalance({
   )
 }
 
-function MintTokens() {
-  const [selectedToken, setSelectedToken] = useState(MOCK_TOKENS[0].address)
+function MintTokens({ selectedToken, setSelectedToken }: { selectedToken: string, setSelectedToken: (token: string) => void }) {
   const [batchRecipients, setBatchRecipients] = useState('')
   const [batchAmounts, setBatchAmounts] = useState('')
 
@@ -274,7 +273,7 @@ function MintTokens() {
   )
 }
 
-function TokenList() {
+function TokenList({ onTokenClick }: { onTokenClick: (tokenAddress: string) => void }) {
   const { address } = useAccount()
 
   return (
@@ -288,7 +287,11 @@ function TokenList() {
       <CardContent>
         <div className="space-y-4">
           {MOCK_TOKENS.map((token) => (
-            <div key={token.address} className="p-4 border rounded-lg">
+            <div 
+              key={token.address} 
+              className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => onTokenClick(token.address)}
+            >
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <div className="flex items-center gap-2">
@@ -469,6 +472,7 @@ function CrossChainSend() {
 
 export function ManageTokens() {
   const { isConnected } = useAccount()
+  const [selectedToken, setSelectedToken] = useState(MOCK_TOKENS[0].address)
 
   if (!isConnected) {
     return (
@@ -485,8 +489,8 @@ export function ManageTokens() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MintTokens />
-        <TokenList />
+        <MintTokens selectedToken={selectedToken} setSelectedToken={setSelectedToken} />
+        <TokenList onTokenClick={setSelectedToken} />
       </div>
 
       <Separator />

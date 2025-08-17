@@ -9,6 +9,7 @@ import {
   useWaitForTransactionReceipt,
   useWatchContractEvent
 } from 'wagmi'
+import Link from 'next/link'
 import {
   Card,
   CardContent,
@@ -26,7 +27,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Settings, Gavel, Eye, Plus, ShoppingCart } from 'lucide-react'
 import { parseEther, formatEther, isAddress } from 'viem'
-import { dustMarketplaceAbi } from '@/lib/generated'
+import { dustMarketplaceAbi, useReadDustMarketplaceMarketOrders } from '@/lib/generated'
 import {
   MARKETPLACE_ADDRESS,
   MOCK_ARB_USDT_ADDRESS,
@@ -62,6 +63,7 @@ function ManageMarketplace() {
   const [oftAddress, setOftAddress] = useState('')
   const [isTrusted, setIsTrusted] = useState(true)
 
+  const { chain } = useAccount()
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash })
 
@@ -97,6 +99,25 @@ function ManageMarketplace() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="p-4 bg-muted rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium mb-1">Marketplace Contract</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                {MARKETPLACE_ADDRESS}
+              </p>
+            </div>
+            <a
+              href={`${chain?.blockExplorers?.default.url}/address/${MARKETPLACE_ADDRESS}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:text-blue-600 underline text-sm"
+            >
+              View on Explorer →
+            </a>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <h4 className="font-medium">Add/Remove Trusted OFT</h4>
           <div className="space-y-3">
@@ -180,6 +201,166 @@ function ManageMarketplace() {
   )
 }
 
+// Component for individual stored order
+function StoredOrderItem({
+  orderId,
+  onSelectForBid,
+  onInstantBuy,
+  bidAmount,
+  setBidAmount,
+  onPlaceBid,
+  isPending,
+  isConfirming,
+  isSelected
+}: {
+  orderId: string
+  onSelectForBid: (orderId: string) => void
+  onInstantBuy: (orderId: string) => void
+  bidAmount: string
+  setBidAmount: (value: string) => void
+  onPlaceBid: () => void
+  isPending: boolean
+  isConfirming: boolean
+  isSelected: boolean
+}) {
+  // Fetch order data from contract
+  const { data: orderData } = useReadDustMarketplaceMarketOrders({
+    address: MARKETPLACE_ADDRESS as `0x${string}`,
+    args: [orderId as `0x${string}`]
+  })
+
+  // Helper function to check if order is expired
+  const isOrderExpired = (deadline: bigint | undefined): boolean => {
+    if (!deadline) return false
+    const currentTime = Math.floor(Date.now() / 1000)
+    return currentTime > Number(deadline)
+  }
+
+  // Helper function to format deadline
+  const formatDeadline = (deadline: bigint | undefined): string => {
+    if (deadline === undefined) return 'Unknown'
+    if (deadline === BigInt(0)) return 'No deadline was set'
+    const deadlineDate = new Date(Number(deadline) * 1000)
+    const now = new Date()
+    if (deadlineDate < now) return 'Expired'
+    const hoursLeft = Math.floor((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60))
+    if (hoursLeft < 1) {
+      const minutesLeft = Math.floor((deadlineDate.getTime() - now.getTime()) / (1000 * 60))
+      return `${minutesLeft} minutes left`
+    }
+    return `${hoursLeft} hours left`
+  }
+
+  if (!orderData) {
+    return (
+      <div className="p-4 border rounded-lg">
+        <p className="text-sm text-muted-foreground">Loading order data...</p>
+      </div>
+    )
+  }
+
+  // Destructure order data
+  const [
+    _orderId,
+    sourceEid,
+    seller,
+    minPrice,
+    deadline,
+    isAuction,
+    isFilled,
+    winner,
+    winningBid,
+    destinationEid
+  ] = orderData
+
+  const expired = isOrderExpired(deadline)
+  const deadlineText = formatDeadline(deadline)
+
+  return (
+    <div className="p-4 border rounded-lg">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex-1">
+          <p className="font-mono text-xs text-muted-foreground mb-1">
+            {orderId.slice(0, 10)}...{orderId.slice(-8)}
+          </p>
+          <div className="flex items-center gap-2 mb-2">
+            {isFilled ? (
+              <Badge variant="destructive">Filled</Badge>
+            ) : expired ? (
+              <Badge variant="destructive">Expired</Badge>
+            ) : (
+              <Badge variant="secondary">Active</Badge>
+            )}
+            {isAuction ? (
+              <Badge variant="outline">Auction</Badge>
+            ) : (
+              <Badge variant="outline">Fixed Price</Badge>
+            )}
+          </div>
+          <div className="space-y-1 text-sm">
+            <p><strong>Seller:</strong> {seller?.slice(0, 6)}...{seller?.slice(-4)}</p>
+            <p><strong>Min Price:</strong> {minPrice ? formatEther(minPrice) : '0'} USDC</p>
+            <p><strong>Deadline:</strong> {deadlineText}</p>
+            {isFilled && winner !== '0x0000000000000000000000000000000000000000' && (
+              <p className="text-blue-600">
+                <strong>Winner:</strong> {winner?.slice(0, 6)}...{winner?.slice(-4)}
+                ({winningBid ? formatEther(winningBid) : '0'} USDC)
+              </p>
+            )}
+          </div>
+        </div>
+        {!isFilled && !expired && (
+          <div className="flex gap-2">
+            {isAuction && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onSelectForBid(orderId)}
+              >
+                <Gavel className="w-4 h-4 mr-1" />
+                Bid
+              </Button>
+            )}
+            {!isAuction && (
+              <Button
+                size="sm"
+                onClick={() => onInstantBuy(orderId)}
+                disabled={isPending || isConfirming}
+              >
+                <ShoppingCart className="w-4 h-4 mr-1" />
+                Buy
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isSelected && !isFilled && !expired && isAuction && (
+        <div className="mt-4 p-3 bg-muted rounded-md">
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              placeholder="Bid amount (USDC)"
+              value={bidAmount}
+              onChange={(e) => setBidAmount(e.target.value)}
+            />
+            <Button
+              onClick={onPlaceBid}
+              disabled={isPending || isConfirming || !bidAmount}
+            >
+              {isPending || isConfirming ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                'Place Bid'
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function OrderList() {
   const [orderIds] = useState(getStoredOrderIds())
   const [selectedOrderId, setSelectedOrderId] = useState('')
@@ -190,17 +371,6 @@ function OrderList() {
 
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash })
-
-  // Read order data for selected order
-  const { data: orderData } = useReadContract({
-    address: MARKETPLACE_ADDRESS as `0x${string}`,
-    abi: dustMarketplaceAbi,
-    functionName: 'marketOrders',
-    args: [selectedOrderId as `0x${string}`],
-    query: {
-      enabled: !!selectedOrderId
-    }
-  })
 
   useWatchContractEvent({
     address: MARKETPLACE_ADDRESS as `0x${string}`,
@@ -301,7 +471,6 @@ function OrderList() {
       abi: dustMarketplaceAbi,
       functionName: 'instantBuy',
       args: [orderId as `0x${string}`],
-      value: parseEther('0.01') // Mock payment
     })
   }
 
@@ -322,7 +491,6 @@ function OrderList() {
       abi: dustMarketplaceAbi,
       functionName: 'finalizeAuction',
       args: [orderId as `0x${string}`],
-      value: parseEther('0.01') // Mock payment
     })
   }
 
@@ -351,58 +519,18 @@ function OrderList() {
             <h4 className="font-medium">Your Created Orders</h4>
             <div className="space-y-3">
               {orderIds.map((orderId) => (
-                <div key={orderId} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="font-mono text-sm">{orderId}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">Mock Order</Badge>
-                        <Badge variant="secondary">Pending</Badge>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedOrderId(orderId)}
-                      >
-                        <Gavel className="w-4 h-4 mr-1" />
-                        Bid
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleInstantBuy(orderId)}
-                        disabled={isPending || isConfirming}
-                      >
-                        <ShoppingCart className="w-4 h-4 mr-1" />
-                        Buy
-                      </Button>
-                    </div>
-                  </div>
-
-                  {selectedOrderId === orderId && (
-                    <div className="mt-4 p-3 bg-muted rounded-md">
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          placeholder="Bid amount (USDC)"
-                          value={bidAmount}
-                          onChange={(e) => setBidAmount(e.target.value)}
-                        />
-                        <Button
-                          onClick={handlePlaceBid}
-                          disabled={isPending || isConfirming || !bidAmount}
-                        >
-                          {isPending || isConfirming ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            'Place Bid'
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <StoredOrderItem
+                  key={orderId}
+                  orderId={orderId}
+                  onSelectForBid={setSelectedOrderId}
+                  onInstantBuy={handleInstantBuy}
+                  bidAmount={bidAmount}
+                  setBidAmount={setBidAmount}
+                  onPlaceBid={handlePlaceBid}
+                  isPending={isPending}
+                  isConfirming={isConfirming}
+                  isSelected={selectedOrderId === orderId}
+                />
               ))}
             </div>
           </div>

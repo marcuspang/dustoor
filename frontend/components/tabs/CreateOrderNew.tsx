@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   useAccount,
   useWriteContract,
-  useWaitForTransactionReceipt
+  useWaitForTransactionReceipt,
+  useWatchContractEvent
 } from 'wagmi'
 import {
   Card,
@@ -31,7 +32,7 @@ import {
   parseAbiParameters,
   pad
 } from 'viem'
-import { mockOftAbi, useReadMockOftQuoteSend } from '@/lib/generated'
+import { mockOftAbi, useReadMockOftQuoteSend, dustMarketplaceAbi } from '@/lib/generated'
 import {
   MARKETPLACE_ADDRESS,
   MOCK_ARB_USDT_ADDRESS,
@@ -56,28 +57,29 @@ const createExecutorOptions = (
   gas: number,
   value: number = 0
 ): `0x${string}` => {
-  // Option Type: 1 = LZ_RECEIVE, 3 = LZ_COMPOSE
-  // For compose messages, we need both lzReceive (type 1) and lzCompose (type 3)
+  // TYPE_3 options format
+  const TYPE_3 = '0003'
+  const EXECUTOR_WORKER_ID = '01'
+  const OPTION_TYPE_LZRECEIVE = '01'
+  const OPTION_TYPE_LZCOMPOSE = '03'
+  
+  // LZ_RECEIVE option
+  // Format: [worker_id][option_size][option_type][gas(uint128)][value(uint128)]
+  const lzReceiveGas = gas.toString(16).padStart(32, '0') // uint128 = 16 bytes = 32 hex chars
+  const lzReceiveValue = value.toString(16).padStart(32, '0') // uint128 = 16 bytes = 32 hex chars
+  const lzReceiveOptionData = lzReceiveGas + lzReceiveValue
+  const lzReceiveOptionSize = (1 + lzReceiveOptionData.length / 2).toString(16).padStart(4, '0') // +1 for option type
+  
+  // LZ_COMPOSE option  
+  // Format: [worker_id][option_size][option_type][index(uint16)][gas(uint128)][value(uint128)]
+  const lzComposeIndex = '0000' // uint16 = 2 bytes = 4 hex chars
+  const lzComposeGas = (gas * 2).toString(16).padStart(32, '0') // uint128 = 16 bytes = 32 hex chars
+  const lzComposeValue = value.toString(16).padStart(32, '0') // uint128 = 16 bytes = 32 hex chars
+  const lzComposeOptionData = lzComposeIndex + lzComposeGas + lzComposeValue
+  const lzComposeOptionSize = (1 + lzComposeOptionData.length / 2).toString(16).padStart(4, '0') // +1 for option type
 
-  // LZ_RECEIVE option (type 1)
-  const lzReceiveType = '0001' // type 1
-  const lzReceiveGas = gas.toString(16).padStart(8, '0') // 4 bytes gas
-  const lzReceiveValue = value.toString(16).padStart(32, '0') // 16 bytes value
-  const lzReceiveOption = lzReceiveType + lzReceiveGas + lzReceiveValue
-
-  // LZ_COMPOSE option (type 3) - for compose message execution
-  const lzComposeType = '0003' // type 3
-  const lzComposeIndex = '0000' // compose index (0)
-  const lzComposeGas = (gas * 2).toString(16).padStart(8, '0') // 4 bytes gas (double for compose)
-  const lzComposeValue = value.toString(16).padStart(32, '0') // 16 bytes value
-  const lzComposeOption =
-    lzComposeType + lzComposeIndex + lzComposeGas + lzComposeValue
-
-  // Combine both options with length prefixes
-  const totalLength = (lzReceiveOption.length + lzComposeOption.length) / 2
-  const lengthPrefix = totalLength.toString(16).padStart(4, '0')
-
-  return `0x${lengthPrefix}${lzReceiveOption}${lzComposeOption}` as `0x${string}`
+  // Combine: TYPE_3 + executor options
+  return `0x${TYPE_3}${EXECUTOR_WORKER_ID}${lzReceiveOptionSize}${OPTION_TYPE_LZRECEIVE}${lzReceiveOptionData}${EXECUTOR_WORKER_ID}${lzComposeOptionSize}${OPTION_TYPE_LZCOMPOSE}${lzComposeOptionData}` as `0x${string}`
 }
 
 interface TokenSelection {
@@ -106,13 +108,37 @@ const addOrderId = (orderId: string) => {
 export function CreateOrderNew() {
   const [selectedTokens, setSelectedTokens] = useState<TokenSelection[]>([])
   const [minPrice, setMinPrice] = useState('')
-  const [deadline, setDeadline] = useState('24')
+  const [deadline, setDeadline] = useState('168') // 7 days default
   const [isAuction, setIsAuction] = useState(false)
   const [destinationEid, setDestinationEid] = useState('40231') // Arbitrum Sepolia
 
   const { address, chain, chainId } = useAccount()
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash })
+  
+  // Watch for OrderListed events to capture the actual order ID
+  useWatchContractEvent({
+    address: MARKETPLACE_ADDRESS as `0x${string}`,
+    abi: dustMarketplaceAbi,
+    eventName: 'OrderListed',
+    onLogs(logs) {
+      logs.forEach((log) => {
+        // Check if this order is from the current user
+        if (log.args.seller && log.args.seller.toLowerCase() === address?.toLowerCase()) {
+          const orderId = log.args.orderId as string
+          console.log('Order created with ID:', orderId)
+          console.log('Order details:', {
+            orderId,
+            seller: log.args.seller,
+            minPrice: log.args.minPrice,
+            blockNumber: log.blockNumber
+          })
+          // Add the actual order ID to localStorage
+          addOrderId(orderId)
+        }
+      })
+    }
+  })
 
   // Add token to selection
   const addToken = (token: (typeof MOCK_TOKENS)[0]) => {
@@ -240,22 +266,22 @@ export function CreateOrderNew() {
         value: fee.nativeFee // Pay the native fee
       })
 
-      // Store order details locally for tracking
-      const orderDetails = {
-        tokens: selectedTokens,
-        minPrice,
-        deadline: deadlineTimestamp,
-        isAuction,
-        destinationEid,
-        composeMsg,
-        timestamp: Date.now()
-      }
-
-      // Add to local storage for tracking
-      const orderId = keccak256(
-        encodePacked(['string'], [JSON.stringify(orderDetails)])
-      )
-      addOrderId(orderId)
+      // Log details for debugging
+      console.log('Creating order with deadline:', {
+        deadlineHours: deadline,
+        deadlineTimestamp,
+        deadlineDate: new Date(deadlineTimestamp * 1000).toISOString(),
+        currentTime: Math.floor(Date.now() / 1000),
+        composeMessage: composeMsg
+      })
+      
+      // Note: The actual order ID will be generated by the smart contract
+      // We should listen to OrderListed events to get the real order ID
+      // For now, we'll generate a temporary tracking ID
+      const tempTrackingId = `0x${Date.now().toString(16)}${Math.random().toString(16).slice(2, 10)}`
+      
+      console.log('Transaction sent with temporary tracking ID:', tempTrackingId)
+      // Don't add to localStorage yet - wait for the OrderListed event
     } catch (error) {
       console.error('Error creating order:', error)
     }
@@ -379,10 +405,19 @@ export function CreateOrderNew() {
               <Input
                 id="deadline"
                 type="number"
-                placeholder="24"
+                placeholder="168"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Default: 7 days (168 hours). Minimum recommended: 24 hours.
+              </p>
+              {deadline && (
+                <p className="text-xs text-muted-foreground">
+                  Order will expire on:{' '}
+                  {new Date(Date.now() + parseInt(deadline) * 3600 * 1000).toLocaleString()}
+                </p>
+              )}
             </div>
           </div>
 
@@ -463,14 +498,14 @@ export function CreateOrderNew() {
               <p className="text-xs font-mono break-all">
                 {generateComposeMessage()}
               </p>
-              <div className="mt-2 text-xs text-muted-foreground">
-                <p>
-                  Parameters encoded: recipient={address?.slice(0, 6)}...
-                  {address?.slice(-4)}, minPrice={minPrice} USDC, deadline=
-                  {deadline}h, isAuction={isAuction ? 'true' : 'false'},
-                  destinationEid={destinationEid}, additionalTokens=
-                  {selectedTokens.length - 1}
-                </p>
+              <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                <p><strong>Encoded Parameters:</strong></p>
+                <p>• Min Price: {minPrice} USDC</p>
+                <p>• Deadline Timestamp: {Math.floor(Date.now() / 1000) + parseInt(deadline) * 3600}</p>
+                <p>• Deadline Date: {new Date((Math.floor(Date.now() / 1000) + parseInt(deadline) * 3600) * 1000).toISOString()}</p>
+                <p>• Order Type: {isAuction ? 'Auction' : 'Fixed Price'}</p>
+                <p>• Settlement Chain ID: {destinationEid}</p>
+                <p>• Seller: {address?.slice(0, 6)}...{address?.slice(-4)}</p>
               </div>
             </div>
           </div>
