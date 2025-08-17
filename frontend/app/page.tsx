@@ -4,7 +4,12 @@ import { DynamicWidget } from '@dynamic-labs/sdk-react-core'
 import { useAccount } from 'wagmi'
 import { useQueryState } from 'nuqs'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription
+} from '@/components/ui/card'
 import { HowItWorks } from '@/components/tabs/HowItWorks'
 import { ManageTokens } from '@/components/tabs/ManageTokens'
 import { Auction } from '@/components/tabs/Auction'
@@ -22,7 +27,9 @@ function AccountInfo() {
           <div className="space-y-1 text-sm">
             <p>Connected: {isConnected ? 'true' : 'false'}</p>
             <p>Address: {address}</p>
-            <p>Network: {chain?.name} (ID: {chain?.id})</p>
+            <p>
+              Network: {chain?.name} (ID: {chain?.id})
+            </p>
           </div>
         </CardDescription>
       </CardHeader>
@@ -41,7 +48,9 @@ export default function Home() {
         {/* Header with wallet connection */}
         <div className="flex flex-col items-center gap-6 mb-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight">Cross-Chain Dust Aggregator</h1>
+            <h1 className="text-4xl font-bold tracking-tight">
+              Cross-Chain Dust Aggregator
+            </h1>
             <p className="text-xl text-muted-foreground mt-2">
               Test LayerZero V2 Compose & Marketplace Functionality
             </p>

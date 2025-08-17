@@ -1,9 +1,7 @@
 'use client'
 
 import { EthereumWalletConnectors } from '@dynamic-labs/ethereum'
-import {
-  DynamicContextProvider
-} from '@dynamic-labs/sdk-react-core'
+import { DynamicContextProvider } from '@dynamic-labs/sdk-react-core'
 import { DynamicWagmiConnector } from '@dynamic-labs/wagmi-connector'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider } from 'wagmi'
@@ -28,9 +26,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <DynamicWagmiConnector>
-            <NuqsAdapter>
-              {children}
-            </NuqsAdapter>
+            <NuqsAdapter>{children}</NuqsAdapter>
           </DynamicWagmiConnector>
         </QueryClientProvider>
       </WagmiProvider>

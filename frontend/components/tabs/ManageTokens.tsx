@@ -1,8 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt
+} from 'wagmi'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,21 +34,27 @@ import Link from 'next/link'
 const MOCK_TOKENS = [
   { address: MOCK_ARB_USDT_ADDRESS, symbol: 'USDT', name: 'USD Tether' },
   { address: MOCK_ARB_USDC_ADDRESS, symbol: 'USDC', name: 'USD Coin' },
-  { address: MOCK_ARB_LINK_ADDRESS, symbol: 'LINK', name: 'Chainlink Token' },
+  { address: MOCK_ARB_LINK_ADDRESS, symbol: 'LINK', name: 'Chainlink Token' }
 ]
 
-function TokenBalance({ tokenAddress, userAddress }: { tokenAddress: string; userAddress: string }) {
+function TokenBalance({
+  tokenAddress,
+  userAddress
+}: {
+  tokenAddress: string
+  userAddress: string
+}) {
   const { data: balance } = useReadContract({
     address: tokenAddress as `0x${string}`,
     abi: mockOftAbi,
     functionName: 'balanceOf',
-    args: [userAddress as `0x${string}`],
+    args: [userAddress as `0x${string}`]
   })
 
   const { data: symbol } = useReadContract({
     address: tokenAddress as `0x${string}`,
     abi: mockOftAbi,
-    functionName: 'symbol',
+    functionName: 'symbol'
   })
 
   return (
@@ -65,13 +82,18 @@ function MintTokens() {
       address: selectedToken as `0x${string}`,
       abi: mockOftAbi,
       functionName: 'mint',
-      args: [recipient as `0x${string}`, parseEther(amount)],
+      args: [recipient as `0x${string}`, parseEther(amount)]
     })
   }
 
   const handleBatchMint = () => {
-    const recipients = batchRecipients.split('\n').filter(addr => addr.trim() && isAddress(addr.trim()))
-    const amounts = batchAmounts.split('\n').filter(amt => amt.trim()).map(amt => parseEther(amt.trim()))
+    const recipients = batchRecipients
+      .split('\n')
+      .filter((addr) => addr.trim() && isAddress(addr.trim()))
+    const amounts = batchAmounts
+      .split('\n')
+      .filter((amt) => amt.trim())
+      .map((amt) => parseEther(amt.trim()))
 
     if (recipients.length !== amounts.length || recipients.length === 0) {
       alert('Recipients and amounts must have the same number of entries')
@@ -82,7 +104,7 @@ function MintTokens() {
       address: selectedToken as `0x${string}`,
       abi: mockOftAbi,
       functionName: 'batchMint',
-      args: [recipients as `0x${string}`[], amounts],
+      args: [recipients as `0x${string}`[], amounts]
     })
   }
 
@@ -186,7 +208,9 @@ function MintTokens() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="batch-recipients">Recipients (one per line)</Label>
+                <Label htmlFor="batch-recipients">
+                  Recipients (one per line)
+                </Label>
                 <textarea
                   id="batch-recipients"
                   className="w-full p-2 border rounded-md h-32 text-sm font-mono"
@@ -210,7 +234,9 @@ function MintTokens() {
 
             <Button
               onClick={handleBatchMint}
-              disabled={isPending || isConfirming || !batchRecipients || !batchAmounts}
+              disabled={
+                isPending || isConfirming || !batchRecipients || !batchAmounts
+              }
               className="w-full"
             >
               {isPending || isConfirming ? (
@@ -230,8 +256,16 @@ function MintTokens() {
 
         {hash && (
           <Alert className="mt-4">
-            <AlertDescription className='break-all'>
-              Transaction submitted: <Link href={`${chain?.blockExplorers?.default.url}/tx/${hash}`} target="_blank" rel="noopener noreferrer" className='text-blue-500 underline'>{hash}</Link>
+            <AlertDescription className="break-all">
+              Transaction submitted:{' '}
+              <Link
+                href={`${chain?.blockExplorers?.default.url}/tx/${hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 underline"
+              >
+                {hash}
+              </Link>
             </AlertDescription>
           </Alert>
         )}
@@ -316,7 +350,7 @@ function CrossChainSend() {
       abi: mockOftAbi,
       functionName: 'send',
       args: [sendParam, fee, address as `0x${string}`],
-      value: parseEther('0.01'),
+      value: parseEther('0.01')
     })
   }
 
@@ -425,9 +459,7 @@ function CrossChainSend() {
 
         {hash && (
           <Alert className="mt-4">
-            <AlertDescription>
-              Transaction submitted: {hash}
-            </AlertDescription>
+            <AlertDescription>Transaction submitted: {hash}</AlertDescription>
           </Alert>
         )}
       </CardContent>
@@ -442,7 +474,9 @@ export function ManageTokens() {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground">Please connect your wallet to manage tokens</p>
+          <p className="text-muted-foreground">
+            Please connect your wallet to manage tokens
+          </p>
         </CardContent>
       </Card>
     )

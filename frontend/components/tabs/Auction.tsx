@@ -2,8 +2,20 @@
 
 import { useState } from 'react'
 import { useQueryState } from 'nuqs'
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent } from 'wagmi'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useWatchContractEvent
+} from 'wagmi'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,13 +27,19 @@ import { Switch } from '@/components/ui/switch'
 import { Loader2, Settings, Gavel, Eye, Plus, ShoppingCart } from 'lucide-react'
 import { parseEther, formatEther, isAddress } from 'viem'
 import { dustMarketplaceAbi } from '@/lib/generated'
-import { MARKETPLACE_ADDRESS, MOCK_ARB_USDT_ADDRESS, MOCK_ARB_USDC_ADDRESS, MOCK_ARB_LINK_ADDRESS, RECENT_BLOCK } from '@/app/constants'
+import {
+  MARKETPLACE_ADDRESS,
+  MOCK_ARB_USDT_ADDRESS,
+  MOCK_ARB_USDC_ADDRESS,
+  MOCK_ARB_LINK_ADDRESS,
+  RECENT_BLOCK
+} from '@/app/constants'
 import { CreateOrderNew } from './CreateOrderNew'
 
 const MOCK_TOKENS = [
   { address: MOCK_ARB_USDT_ADDRESS, symbol: 'USDT', name: 'USD Tether' },
   { address: MOCK_ARB_USDC_ADDRESS, symbol: 'USDC', name: 'USD Coin' },
-  { address: MOCK_ARB_LINK_ADDRESS, symbol: 'LINK', name: 'Chainlink Token' },
+  { address: MOCK_ARB_LINK_ADDRESS, symbol: 'LINK', name: 'Chainlink Token' }
 ]
 
 // Local storage helpers
@@ -54,7 +72,7 @@ function ManageMarketplace() {
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: dustMarketplaceAbi,
       functionName: 'setTrustedOFT',
-      args: [oftAddress as `0x${string}`, isTrusted],
+      args: [oftAddress as `0x${string}`, isTrusted]
     })
   }
 
@@ -63,7 +81,7 @@ function ManageMarketplace() {
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: dustMarketplaceAbi,
       functionName: 'setTrustedOFT',
-      args: [tokenAddress as `0x${string}`, true],
+      args: [tokenAddress as `0x${string}`, true]
     })
   }
 
@@ -126,11 +144,18 @@ function ManageMarketplace() {
           <h4 className="font-medium">Quick Add Mock Tokens</h4>
           <div className="space-y-2">
             {MOCK_TOKENS.map((token) => (
-              <div key={token.address} className="flex items-center justify-between p-3 border rounded-lg">
+              <div
+                key={token.address}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
                 <div>
-                  <Badge variant="secondary" className="mr-2">{token.symbol}</Badge>
+                  <Badge variant="secondary" className="mr-2">
+                    {token.symbol}
+                  </Badge>
                   <span className="text-sm">{token.name}</span>
-                  <p className="text-xs text-muted-foreground">{token.address}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {token.address}
+                  </p>
                 </div>
                 <Button
                   size="sm"
@@ -147,16 +172,13 @@ function ManageMarketplace() {
 
         {hash && (
           <Alert>
-            <AlertDescription>
-              Transaction submitted: {hash}
-            </AlertDescription>
+            <AlertDescription>Transaction submitted: {hash}</AlertDescription>
           </Alert>
         )}
       </CardContent>
     </Card>
   )
 }
-
 
 function OrderList() {
   const [orderIds] = useState(getStoredOrderIds())
@@ -176,7 +198,7 @@ function OrderList() {
     functionName: 'marketOrders',
     args: [selectedOrderId as `0x${string}`],
     query: {
-      enabled: !!selectedOrderId,
+      enabled: !!selectedOrderId
     }
   })
 
@@ -185,7 +207,7 @@ function OrderList() {
     abi: dustMarketplaceAbi,
     eventName: 'OrderListed',
     onLogs(logs) {
-      const newOrders = logs.map(log => ({
+      const newOrders = logs.map((log) => ({
         orderId: log.args.orderId,
         seller: log.args.seller,
         minPrice: log.args.minPrice,
@@ -193,7 +215,7 @@ function OrderList() {
         transactionHash: log.transactionHash,
         status: 'active'
       }))
-      setListedOrders(prev => [...prev, ...newOrders])
+      setListedOrders((prev) => [...prev, ...newOrders])
     },
     fromBlock: BigInt(RECENT_BLOCK)
   })
@@ -203,7 +225,7 @@ function OrderList() {
     abi: dustMarketplaceAbi,
     eventName: 'BidPlaced',
     onLogs(logs) {
-      logs.forEach(log => {
+      logs.forEach((log) => {
         const orderId = log.args.orderId as string
         const bid = {
           bidder: log.args.bidder,
@@ -211,7 +233,7 @@ function OrderList() {
           blockNumber: log.blockNumber,
           transactionHash: log.transactionHash
         }
-        setOrderBids(prev => {
+        setOrderBids((prev) => {
           const newMap = new Map(prev)
           const existingBids = newMap.get(orderId) || []
           newMap.set(orderId, [...existingBids, bid])
@@ -228,13 +250,18 @@ function OrderList() {
     abi: dustMarketplaceAbi,
     eventName: 'InstantBuyExecuted',
     onLogs(logs) {
-      logs.forEach(log => {
+      logs.forEach((log) => {
         const orderId = log.args.orderId as string
-        setFilledOrders(prev => new Set([...prev, orderId]))
-        setListedOrders(prev =>
-          prev.map(order =>
+        setFilledOrders((prev) => new Set([...prev, orderId]))
+        setListedOrders((prev) =>
+          prev.map((order) =>
             order.orderId === orderId
-              ? { ...order, status: 'filled', buyer: log.args.buyer, price: log.args.price }
+              ? {
+                  ...order,
+                  status: 'filled',
+                  buyer: log.args.buyer,
+                  price: log.args.price
+                }
               : order
           )
         )
@@ -248,13 +275,18 @@ function OrderList() {
     abi: dustMarketplaceAbi,
     eventName: 'OrderFilled',
     onLogs(logs) {
-      logs.forEach(log => {
+      logs.forEach((log) => {
         const orderId = log.args.orderId as string
-        setFilledOrders(prev => new Set([...prev, orderId]))
-        setListedOrders(prev =>
-          prev.map(order =>
+        setFilledOrders((prev) => new Set([...prev, orderId]))
+        setListedOrders((prev) =>
+          prev.map((order) =>
             order.orderId === orderId
-              ? { ...order, status: 'filled', winner: log.args.winner, winningPrice: log.args.price }
+              ? {
+                  ...order,
+                  status: 'filled',
+                  winner: log.args.winner,
+                  winningPrice: log.args.price
+                }
               : order
           )
         )
@@ -269,7 +301,7 @@ function OrderList() {
       abi: dustMarketplaceAbi,
       functionName: 'instantBuy',
       args: [orderId as `0x${string}`],
-      value: parseEther('0.01'), // Mock payment
+      value: parseEther('0.01') // Mock payment
     })
   }
 
@@ -280,7 +312,7 @@ function OrderList() {
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: dustMarketplaceAbi,
       functionName: 'placeBid',
-      args: [selectedOrderId as `0x${string}`, parseEther(bidAmount)],
+      args: [selectedOrderId as `0x${string}`, parseEther(bidAmount)]
     })
   }
 
@@ -290,7 +322,7 @@ function OrderList() {
       abi: dustMarketplaceAbi,
       functionName: 'finalizeAuction',
       args: [orderId as `0x${string}`],
-      value: parseEther('0.01'), // Mock payment
+      value: parseEther('0.01') // Mock payment
     })
   }
 
@@ -310,7 +342,8 @@ function OrderList() {
           <div className="text-center py-8">
             <p className="text-muted-foreground">No orders created yet</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Create orders using the form above or by sending OFT tokens with compose messages
+              Create orders using the form above or by sending OFT tokens with
+              compose messages
             </p>
           </div>
         ) : (
@@ -379,13 +412,17 @@ function OrderList() {
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium">Real-Time Market Orders (from Events)</h4>
+            <h4 className="font-medium">
+              Real-Time Market Orders (from Events)
+            </h4>
             <Badge variant="outline">{listedOrders.length} orders found</Badge>
           </div>
 
           {listedOrders.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No orders found in recent blocks</p>
+              <p className="text-muted-foreground">
+                No orders found in recent blocks
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
                 Orders will appear here when created via OFT compose messages
               </p>
@@ -402,7 +439,9 @@ function OrderList() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={isFilled ? "destructive" : "secondary"}>
+                          <Badge
+                            variant={isFilled ? 'destructive' : 'secondary'}
+                          >
                             {isFilled ? 'Filled' : 'Active'}
                           </Badge>
                           <span className="font-mono text-xs text-muted-foreground">
@@ -412,28 +451,42 @@ function OrderList() {
 
                         <div className="space-y-1">
                           <p className="text-sm">
-                            <strong>Seller:</strong> {order.seller?.slice(0, 6)}...{order.seller?.slice(-4)}
+                            <strong>Seller:</strong> {order.seller?.slice(0, 6)}
+                            ...{order.seller?.slice(-4)}
                           </p>
                           <p className="text-sm">
-                            <strong>Min Price:</strong> {order.minPrice ? formatEther(order.minPrice) : '0'} USDC
+                            <strong>Min Price:</strong>{' '}
+                            {order.minPrice ? formatEther(order.minPrice) : '0'}{' '}
+                            USDC
                           </p>
                           {latestBid && (
                             <p className="text-sm text-green-600">
-                              <strong>Latest Bid:</strong> {formatEther(latestBid.amount)} USDC by {latestBid.bidder?.slice(0, 6)}...
+                              <strong>Latest Bid:</strong>{' '}
+                              {formatEther(latestBid.amount)} USDC by{' '}
+                              {latestBid.bidder?.slice(0, 6)}...
                             </p>
                           )}
                           {isFilled && order.buyer && (
                             <p className="text-sm text-blue-600">
-                              <strong>Sold to:</strong> {order.buyer?.slice(0, 6)}... for {order.price ? formatEther(order.price) : '0'} USDC
+                              <strong>Sold to:</strong>{' '}
+                              {order.buyer?.slice(0, 6)}... for{' '}
+                              {order.price ? formatEther(order.price) : '0'}{' '}
+                              USDC
                             </p>
                           )}
                           {isFilled && order.winner && (
                             <p className="text-sm text-blue-600">
-                              <strong>Won by:</strong> {order.winner?.slice(0, 6)}... for {order.winningPrice ? formatEther(order.winningPrice) : '0'} USDC
+                              <strong>Won by:</strong>{' '}
+                              {order.winner?.slice(0, 6)}... for{' '}
+                              {order.winningPrice
+                                ? formatEther(order.winningPrice)
+                                : '0'}{' '}
+                              USDC
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            Block: {order.blockNumber?.toString()} • Tx: {order.transactionHash?.slice(0, 10)}...
+                            Block: {order.blockNumber?.toString()} • Tx:{' '}
+                            {order.transactionHash?.slice(0, 10)}...
                           </p>
                         </div>
                       </div>
@@ -467,8 +520,12 @@ function OrderList() {
                             <div className="text-sm">
                               <p className="font-medium mb-1">Bid History:</p>
                               {bids.slice(-3).map((bid, idx) => (
-                                <p key={idx} className="text-xs text-muted-foreground">
-                                  {formatEther(bid.amount)} USDC by {bid.bidder?.slice(0, 6)}...
+                                <p
+                                  key={idx}
+                                  className="text-xs text-muted-foreground"
+                                >
+                                  {formatEther(bid.amount)} USDC by{' '}
+                                  {bid.bidder?.slice(0, 6)}...
                                 </p>
                               ))}
                             </div>
@@ -503,9 +560,7 @@ function OrderList() {
 
         {hash && (
           <Alert>
-            <AlertDescription>
-              Transaction submitted: {hash}
-            </AlertDescription>
+            <AlertDescription>Transaction submitted: {hash}</AlertDescription>
           </Alert>
         )}
       </CardContent>
@@ -523,7 +578,9 @@ export function Auction() {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground">Please connect your wallet to access marketplace features</p>
+          <p className="text-muted-foreground">
+            Please connect your wallet to access marketplace features
+          </p>
         </CardContent>
       </Card>
     )
