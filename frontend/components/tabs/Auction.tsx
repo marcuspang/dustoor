@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useState } from 'react'
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,10 +11,11 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, Settings, ShoppingCart, Gavel, Eye, Plus, Check, X } from 'lucide-react'
-import { parseEther, formatEther, isAddress, keccak256, encodePacked } from 'viem'
+import { Loader2, Settings, Gavel, Eye, Plus, ShoppingCart } from 'lucide-react'
+import { parseEther, formatEther, isAddress } from 'viem'
 import { dustMarketplaceAbi } from '@/lib/generated'
-import { MARKETPLACE_ADDRESS, MOCK_ARB_USDT_ADDRESS, MOCK_ARB_USDC_ADDRESS, MOCK_ARB_LINK_ADDRESS } from '@/app/constants'
+import { MARKETPLACE_ADDRESS, MOCK_ARB_USDT_ADDRESS, MOCK_ARB_USDC_ADDRESS, MOCK_ARB_LINK_ADDRESS, RECENT_BLOCK } from '@/app/constants'
+import { CreateOrderNew } from './CreateOrderNew'
 
 const MOCK_TOKENS = [
   { address: MOCK_ARB_USDT_ADDRESS, symbol: 'USDT', name: 'USD Tether' },
@@ -101,8 +102,8 @@ function ManageMarketplace() {
               </Label>
             </div>
 
-            <Button 
-              onClick={handleSetTrustedOFT} 
+            <Button
+              onClick={handleSetTrustedOFT}
               disabled={isPending || isConfirming || !oftAddress}
               className="w-full"
             >
@@ -155,163 +156,110 @@ function ManageMarketplace() {
   )
 }
 
-function CreateOrder() {
-  const [tokenAddress, setTokenAddress] = useState(MOCK_TOKENS[0].address)
-  const [amount, setAmount] = useState('')
-  const [minPrice, setMinPrice] = useState('')
-  const [deadline, setDeadline] = useState('')
-  const [isAuction, setIsAuction] = useState(false)
-  const [destinationEid, setDestinationEid] = useState('40231') // Arbitrum Sepolia
-
-  const { address } = useAccount()
-  const { writeContract, data: hash, isPending } = useWriteContract()
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash })
-
-  const handleCreateOrder = () => {
-    if (!amount || !minPrice || !deadline) return
-
-    // Create a mock order ID for demonstration
-    const mockOrderId = keccak256(
-      encodePacked(
-        ['address', 'uint256', 'uint256'],
-        [address as `0x${string}`, BigInt(Date.now()), parseEther(amount)]
-      )
-    )
-
-    // Add to local storage for tracking
-    addOrderId(mockOrderId)
-
-    // Note: In a real implementation, you'd create the order through the OFT send with compose
-    alert(`Mock order created with ID: ${mockOrderId}\nIn practice, this would be done via OFT send with compose message.`)
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5" />
-          Create Market Order
-        </CardTitle>
-        <CardDescription>
-          Create new auction or instant buy orders (via OFT compose)
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="order-token">Token</Label>
-          <select
-            id="order-token"
-            value={tokenAddress}
-            onChange={(e) => setTokenAddress(e.target.value)}
-            className="w-full p-2 border rounded-md"
-          >
-            {MOCK_TOKENS.map((token) => (
-              <option key={token.address} value={token.address}>
-                {token.symbol} - {token.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="order-amount">Token Amount</Label>
-          <Input
-            id="order-amount"
-            type="number"
-            placeholder="1.0"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="min-price">Minimum Price (USDC)</Label>
-          <Input
-            id="min-price"
-            type="number"
-            placeholder="100.0"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="deadline">Deadline (hours from now)</Label>
-          <Input
-            id="deadline"
-            type="number"
-            placeholder="24"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="destination-chain">Settlement Chain</Label>
-          <select
-            id="destination-chain"
-            value={destinationEid}
-            onChange={(e) => setDestinationEid(e.target.value)}
-            className="w-full p-2 border rounded-md"
-          >
-            <option value="40161">Ethereum Sepolia (40161)</option>
-            <option value="40231">Arbitrum Sepolia (40231)</option>
-            <option value="40245">Base Sepolia (40245)</option>
-          </select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="auction-toggle"
-            checked={isAuction}
-            onCheckedChange={setIsAuction}
-          />
-          <Label htmlFor="auction-toggle">
-            {isAuction ? 'Auction Order' : 'Instant Buy Order'}
-          </Label>
-        </div>
-
-        <Button 
-          onClick={handleCreateOrder} 
-          disabled={isPending || isConfirming || !amount || !minPrice || !deadline}
-          className="w-full"
-        >
-          {isPending || isConfirming ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            `Create ${isAuction ? 'Auction' : 'Instant Buy'} Order`
-          )}
-        </Button>
-
-        <Alert>
-          <AlertDescription>
-            <strong>Note:</strong> In practice, orders are created by sending OFT tokens with compose messages containing these parameters.
-            This form demonstrates the UI - the actual creation would use the "Manage Mock Tokens" → "Cross-Chain Send" functionality.
-          </AlertDescription>
-        </Alert>
-      </CardContent>
-    </Card>
-  )
-}
 
 function OrderList() {
   const [orderIds] = useState(getStoredOrderIds())
   const [selectedOrderId, setSelectedOrderId] = useState('')
   const [bidAmount, setBidAmount] = useState('')
+  const [listedOrders, setListedOrders] = useState<any[]>([])
+  const [filledOrders, setFilledOrders] = useState<Set<string>>(new Set())
+  const [orderBids, setOrderBids] = useState<Map<string, any[]>>(new Map())
 
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash })
 
-  // Read order data (mock implementation)
+  // Read order data for selected order
   const { data: orderData } = useReadContract({
     address: MARKETPLACE_ADDRESS as `0x${string}`,
     abi: dustMarketplaceAbi,
     functionName: 'marketOrders',
     args: [selectedOrderId as `0x${string}`],
-    enabled: !!selectedOrderId,
+    query: {
+      enabled: !!selectedOrderId,
+    }
+  })
+
+  useWatchContractEvent({
+    address: MARKETPLACE_ADDRESS as `0x${string}`,
+    abi: dustMarketplaceAbi,
+    eventName: 'OrderListed',
+    onLogs(logs) {
+      const newOrders = logs.map(log => ({
+        orderId: log.args.orderId,
+        seller: log.args.seller,
+        minPrice: log.args.minPrice,
+        blockNumber: log.blockNumber,
+        transactionHash: log.transactionHash,
+        status: 'active'
+      }))
+      setListedOrders(prev => [...prev, ...newOrders])
+    },
+    fromBlock: BigInt(RECENT_BLOCK)
+  })
+
+  useWatchContractEvent({
+    address: MARKETPLACE_ADDRESS as `0x${string}`,
+    abi: dustMarketplaceAbi,
+    eventName: 'BidPlaced',
+    onLogs(logs) {
+      logs.forEach(log => {
+        const orderId = log.args.orderId as string
+        const bid = {
+          bidder: log.args.bidder,
+          amount: log.args.amount,
+          blockNumber: log.blockNumber,
+          transactionHash: log.transactionHash
+        }
+        setOrderBids(prev => {
+          const newMap = new Map(prev)
+          const existingBids = newMap.get(orderId) || []
+          newMap.set(orderId, [...existingBids, bid])
+          return newMap
+        })
+      })
+    },
+    fromBlock: BigInt(RECENT_BLOCK)
+  })
+
+  // Watch for InstantBuyExecuted events
+  useWatchContractEvent({
+    address: MARKETPLACE_ADDRESS as `0x${string}`,
+    abi: dustMarketplaceAbi,
+    eventName: 'InstantBuyExecuted',
+    onLogs(logs) {
+      logs.forEach(log => {
+        const orderId = log.args.orderId as string
+        setFilledOrders(prev => new Set([...prev, orderId]))
+        setListedOrders(prev =>
+          prev.map(order =>
+            order.orderId === orderId
+              ? { ...order, status: 'filled', buyer: log.args.buyer, price: log.args.price }
+              : order
+          )
+        )
+      })
+    },
+    fromBlock: BigInt(RECENT_BLOCK)
+  })
+
+  useWatchContractEvent({
+    address: MARKETPLACE_ADDRESS as `0x${string}`,
+    abi: dustMarketplaceAbi,
+    eventName: 'OrderFilled',
+    onLogs(logs) {
+      logs.forEach(log => {
+        const orderId = log.args.orderId as string
+        setFilledOrders(prev => new Set([...prev, orderId]))
+        setListedOrders(prev =>
+          prev.map(order =>
+            order.orderId === orderId
+              ? { ...order, status: 'filled', winner: log.args.winner, winningPrice: log.args.price }
+              : order
+          )
+        )
+      })
+    },
+    fromBlock: BigInt(RECENT_BLOCK)
   })
 
   const handleInstantBuy = (orderId: string) => {
@@ -397,7 +345,7 @@ function OrderList() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   {selectedOrderId === orderId && (
                     <div className="mt-4 p-3 bg-muted rounded-md">
                       <div className="flex gap-2">
@@ -429,47 +377,127 @@ function OrderList() {
         <Separator />
 
         <div className="space-y-4">
-          <h4 className="font-medium">Mock Real-Time Orders</h4>
-          <div className="space-y-3">
-            {/* Mock orders for demonstration */}
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">USDT</Badge>
-                    <span className="font-medium">1000 USDT</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Min: 950 USDC • Deadline: 2h</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">Auction</Badge>
-                  <Button size="sm" variant="outline">
-                    <Gavel className="w-4 h-4 mr-1" />
-                    Bid
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">LINK</Badge>
-                    <span className="font-medium">50 LINK</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Price: 850 USDC • Instant Buy</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">Instant</Badge>
-                  <Button size="sm">
-                    <ShoppingCart className="w-4 h-4 mr-1" />
-                    Buy Now
-                  </Button>
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium">Real-Time Market Orders (from Events)</h4>
+            <Badge variant="outline">{listedOrders.length} orders found</Badge>
           </div>
+
+          {listedOrders.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No orders found in recent blocks</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Orders will appear here when created via OFT compose messages
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {listedOrders.slice(0, 10).map((order) => {
+                const bids = orderBids.get(order.orderId) || []
+                const latestBid = bids[bids.length - 1]
+                const isFilled = order.status === 'filled'
+
+                return (
+                  <div key={order.orderId} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={isFilled ? "destructive" : "secondary"}>
+                            {isFilled ? 'Filled' : 'Active'}
+                          </Badge>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {order.orderId?.slice(0, 10)}...
+                          </span>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-sm">
+                            <strong>Seller:</strong> {order.seller?.slice(0, 6)}...{order.seller?.slice(-4)}
+                          </p>
+                          <p className="text-sm">
+                            <strong>Min Price:</strong> {order.minPrice ? formatEther(order.minPrice) : '0'} USDC
+                          </p>
+                          {latestBid && (
+                            <p className="text-sm text-green-600">
+                              <strong>Latest Bid:</strong> {formatEther(latestBid.amount)} USDC by {latestBid.bidder?.slice(0, 6)}...
+                            </p>
+                          )}
+                          {isFilled && order.buyer && (
+                            <p className="text-sm text-blue-600">
+                              <strong>Sold to:</strong> {order.buyer?.slice(0, 6)}... for {order.price ? formatEther(order.price) : '0'} USDC
+                            </p>
+                          )}
+                          {isFilled && order.winner && (
+                            <p className="text-sm text-blue-600">
+                              <strong>Won by:</strong> {order.winner?.slice(0, 6)}... for {order.winningPrice ? formatEther(order.winningPrice) : '0'} USDC
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Block: {order.blockNumber?.toString()} • Tx: {order.transactionHash?.slice(0, 10)}...
+                          </p>
+                        </div>
+                      </div>
+
+                      {!isFilled && (
+                        <div className="flex items-center gap-2 ml-4">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedOrderId(order.orderId)}
+                          >
+                            <Gavel className="w-4 h-4 mr-1" />
+                            Bid
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleInstantBuy(order.orderId)}
+                            disabled={isPending || isConfirming}
+                          >
+                            <ShoppingCart className="w-4 h-4 mr-1" />
+                            Buy
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedOrderId === order.orderId && !isFilled && (
+                      <div className="mt-4 p-3 bg-muted rounded-md">
+                        <div className="space-y-2">
+                          {bids.length > 0 && (
+                            <div className="text-sm">
+                              <p className="font-medium mb-1">Bid History:</p>
+                              {bids.slice(-3).map((bid, idx) => (
+                                <p key={idx} className="text-xs text-muted-foreground">
+                                  {formatEther(bid.amount)} USDC by {bid.bidder?.slice(0, 6)}...
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Bid amount (USDC)"
+                              value={bidAmount}
+                              onChange={(e) => setBidAmount(e.target.value)}
+                            />
+                            <Button
+                              onClick={handlePlaceBid}
+                              disabled={isPending || isConfirming || !bidAmount}
+                            >
+                              {isPending || isConfirming ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                'Place Bid'
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {hash && (
@@ -511,7 +539,7 @@ export function Auction() {
         </TabsContent>
 
         <TabsContent value="create" className="mt-6">
-          <CreateOrder />
+          <CreateOrderNew />
         </TabsContent>
 
         <TabsContent value="manage" className="mt-6">

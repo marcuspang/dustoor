@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Plus, Coins, Send, Users } from 'lucide-react'
-import { parseEther, formatEther, isAddress } from 'viem'
+import { parseEther, formatEther, isAddress, type Address } from 'viem'
 import { mockOftAbi } from '@/lib/generated'
 import {
   MOCK_ARB_USDT_ADDRESS,
@@ -127,7 +127,7 @@ function MintTokens() {
                 id="recipient"
                 placeholder="0x..."
                 value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
+                onChange={(e) => setRecipient(e.target.value as Address)}
               />
               {address && (
                 <Button
@@ -302,13 +302,13 @@ function CrossChainSend() {
       amountLD: parseEther(amount),
       minAmountLD: parseEther((parseFloat(amount) * 0.95).toString()), // 5% slippage
       extraOptions: '0x',
-      composeMsg: composeMsg || '0x',
+      composeMsg: (composeMsg as `0x${string}`) || '0x',
       oftCmd: '0x'
-    }
+    } as const
 
     const fee = {
       nativeFee: parseEther('0.01'), // Estimate 0.01 ETH for fees
-      lzTokenFee: 0n
+      lzTokenFee: BigInt(0)
     }
 
     writeContract({
