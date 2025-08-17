@@ -1,47 +1,9 @@
-'use client'
-
+import { AccountInfo } from '@/components/AccountInfo'
+import { HomeTabs } from '@/components/tabs/HomeTabs'
 import { DynamicWidget } from '@dynamic-labs/sdk-react-core'
-import { useAccount } from 'wagmi'
-import { useQueryState } from 'nuqs'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription
-} from '@/components/ui/card'
-import { HowItWorks } from '@/components/tabs/HowItWorks'
-import { ManageTokens } from '@/components/tabs/ManageTokens'
-import { Auction } from '@/components/tabs/Auction'
-
-function AccountInfo() {
-  const { address, isConnected, chain } = useAccount()
-
-  if (!isConnected) return null
-
-  return (
-    <Card className="mb-6 w-full">
-      <CardHeader>
-        <CardTitle>Account Status</CardTitle>
-        <CardDescription>
-          <div className="space-y-1 text-sm">
-            <p>Connected: {isConnected ? 'true' : 'false'}</p>
-            <p>Address: {address}</p>
-            <p>
-              Network: {chain?.name} (ID: {chain?.id})
-            </p>
-          </div>
-        </CardDescription>
-      </CardHeader>
-    </Card>
-  )
-}
+import { Suspense } from 'react'
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useQueryState('tab', {
-    defaultValue: 'how-it-works'
-  })
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -63,26 +25,9 @@ export default function Home() {
           <AccountInfo />
         </div>
 
-        {/* Main Tabs Interface */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
-            <TabsTrigger value="manage-tokens">Manage Mock Tokens</TabsTrigger>
-            <TabsTrigger value="auction">Auction</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="how-it-works" className="mt-6">
-            <HowItWorks />
-          </TabsContent>
-
-          <TabsContent value="manage-tokens" className="mt-6">
-            <ManageTokens />
-          </TabsContent>
-
-          <TabsContent value="auction" className="mt-6">
-            <Auction />
-          </TabsContent>
-        </Tabs>
+        <Suspense fallback={<div>Loading...</div>}>
+          <HomeTabs />
+        </Suspense>
       </div>
     </div>
   )

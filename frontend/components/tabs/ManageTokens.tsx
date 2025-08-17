@@ -64,7 +64,13 @@ function TokenBalance({
   )
 }
 
-function MintTokens({ selectedToken, setSelectedToken }: { selectedToken: string, setSelectedToken: (token: string) => void }) {
+function MintTokens({
+  selectedToken,
+  setSelectedToken
+}: {
+  selectedToken: string
+  setSelectedToken: (token: string) => void
+}) {
   const [batchRecipients, setBatchRecipients] = useState('')
   const [batchAmounts, setBatchAmounts] = useState('')
 
@@ -273,7 +279,11 @@ function MintTokens({ selectedToken, setSelectedToken }: { selectedToken: string
   )
 }
 
-function TokenList({ onTokenClick }: { onTokenClick: (tokenAddress: string) => void }) {
+function TokenList({
+  onTokenClick
+}: {
+  onTokenClick: (tokenAddress: string) => void
+}) {
   const { address } = useAccount()
 
   return (
@@ -287,8 +297,8 @@ function TokenList({ onTokenClick }: { onTokenClick: (tokenAddress: string) => v
       <CardContent>
         <div className="space-y-4">
           {MOCK_TOKENS.map((token) => (
-            <div 
-              key={token.address} 
+            <div
+              key={token.address}
               className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
               onClick={() => onTokenClick(token.address)}
             >
@@ -489,7 +499,10 @@ export function ManageTokens() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MintTokens selectedToken={selectedToken} setSelectedToken={setSelectedToken} />
+        <MintTokens
+          selectedToken={selectedToken}
+          setSelectedToken={setSelectedToken}
+        />
         <TokenList onTokenClick={setSelectedToken} />
       </div>
 

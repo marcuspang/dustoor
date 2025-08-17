@@ -27,7 +27,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Settings, Gavel, Eye, Plus, ShoppingCart } from 'lucide-react'
 import { parseEther, formatEther, isAddress } from 'viem'
-import { dustMarketplaceAbi, useReadDustMarketplaceMarketOrders } from '@/lib/generated'
+import {
+  dustMarketplaceAbi,
+  useReadDustMarketplaceMarketOrders
+} from '@/lib/generated'
 import {
   MARKETPLACE_ADDRESS,
   MOCK_ARB_USDT_ADDRESS,
@@ -243,9 +246,13 @@ function StoredOrderItem({
     const deadlineDate = new Date(Number(deadline) * 1000)
     const now = new Date()
     if (deadlineDate < now) return 'Expired'
-    const hoursLeft = Math.floor((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60))
+    const hoursLeft = Math.floor(
+      (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+    )
     if (hoursLeft < 1) {
-      const minutesLeft = Math.floor((deadlineDate.getTime() - now.getTime()) / (1000 * 60))
+      const minutesLeft = Math.floor(
+        (deadlineDate.getTime() - now.getTime()) / (1000 * 60)
+      )
       return `${minutesLeft} minutes left`
     }
     return `${hoursLeft} hours left`
@@ -298,15 +305,25 @@ function StoredOrderItem({
             )}
           </div>
           <div className="space-y-1 text-sm">
-            <p><strong>Seller:</strong> {seller?.slice(0, 6)}...{seller?.slice(-4)}</p>
-            <p><strong>Min Price:</strong> {minPrice ? formatEther(minPrice) : '0'} USDC</p>
-            <p><strong>Deadline:</strong> {deadlineText}</p>
-            {isFilled && winner !== '0x0000000000000000000000000000000000000000' && (
-              <p className="text-blue-600">
-                <strong>Winner:</strong> {winner?.slice(0, 6)}...{winner?.slice(-4)}
-                ({winningBid ? formatEther(winningBid) : '0'} USDC)
-              </p>
-            )}
+            <p>
+              <strong>Seller:</strong> {seller?.slice(0, 6)}...
+              {seller?.slice(-4)}
+            </p>
+            <p>
+              <strong>Min Price:</strong>{' '}
+              {minPrice ? formatEther(minPrice) : '0'} USDC
+            </p>
+            <p>
+              <strong>Deadline:</strong> {deadlineText}
+            </p>
+            {isFilled &&
+              winner !== '0x0000000000000000000000000000000000000000' && (
+                <p className="text-blue-600">
+                  <strong>Winner:</strong> {winner?.slice(0, 6)}...
+                  {winner?.slice(-4)}(
+                  {winningBid ? formatEther(winningBid) : '0'} USDC)
+                </p>
+              )}
           </div>
         </div>
         {!isFilled && !expired && (
@@ -470,7 +487,7 @@ function OrderList() {
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: dustMarketplaceAbi,
       functionName: 'instantBuy',
-      args: [orderId as `0x${string}`],
+      args: [orderId as `0x${string}`]
     })
   }
 
@@ -490,7 +507,7 @@ function OrderList() {
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: dustMarketplaceAbi,
       functionName: 'finalizeAuction',
-      args: [orderId as `0x${string}`],
+      args: [orderId as `0x${string}`]
     })
   }
 
