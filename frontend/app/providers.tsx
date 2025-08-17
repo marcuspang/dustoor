@@ -8,6 +8,7 @@ import { DynamicWagmiConnector } from '@dynamic-labs/wagmi-connector'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider } from 'wagmi'
 import { config } from '../config'
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 
 const environmentId = process.env.NEXT_PUBLIC_DYNAMIC_ENV_ID!
 if (!environmentId) {
@@ -27,7 +28,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <DynamicWagmiConnector>
-            {children}
+            <NuqsAdapter>
+              {children}
+            </NuqsAdapter>
           </DynamicWagmiConnector>
         </QueryClientProvider>
       </WagmiProvider>

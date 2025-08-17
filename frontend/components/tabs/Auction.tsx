@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryState } from 'nuqs'
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -514,6 +515,9 @@ function OrderList() {
 
 export function Auction() {
   const { isConnected } = useAccount()
+  const [auctionTab, setAuctionTab] = useQueryState('auctionTab', {
+    defaultValue: 'orders'
+  })
 
   if (!isConnected) {
     return (
@@ -527,7 +531,7 @@ export function Auction() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="orders" className="w-full">
+      <Tabs value={auctionTab} onValueChange={setAuctionTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="create">Create Order</TabsTrigger>

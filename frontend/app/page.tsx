@@ -2,6 +2,7 @@
 
 import { DynamicWidget } from '@dynamic-labs/sdk-react-core'
 import { useAccount } from 'wagmi'
+import { useQueryState } from 'nuqs'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { HowItWorks } from '@/components/tabs/HowItWorks'
@@ -30,6 +31,10 @@ function AccountInfo() {
 }
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useQueryState('tab', {
+    defaultValue: 'how-it-works'
+  })
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -50,7 +55,7 @@ export default function Home() {
         </div>
 
         {/* Main Tabs Interface */}
-        <Tabs defaultValue="how-it-works" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
             <TabsTrigger value="manage-tokens">Manage Mock Tokens</TabsTrigger>
