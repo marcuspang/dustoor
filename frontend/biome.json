@@ -7,7 +7,9 @@
       "app/**/*.tsx",
       "components/**/*.tsx",
       "hooks/**/*.ts",
-      "lib/**/*.ts"
+      "lib/**/*.ts",
+      "abi/**/*.ts",
+      "wagmi.config.ts"
     ]
   }
 }
